@@ -1,2 +1,9 @@
 # bandwidth-limit
-limit a container's bandwidth use linux tc command
+
+Useage：
+
+```bash
+./limit.sh -c [container_name/container_id] -r [rates]
+```
+
+
