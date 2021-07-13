@@ -5,7 +5,7 @@ rates=""
 veth=""
 port=""
 nic=""
-
+ip=""
 #get host veth corresponding to container
 #Input: the container's ID
 function getveth() {
@@ -100,7 +100,7 @@ function limit_host(){
   tc filter add dev ifb0 parent 1:0 prio 1 u32 match ip dport ${3} 0xffff flowid 1:10
 }
 
-#Input: rate,ip/marsk
+#Input: rate,ip/marsk（for example: 10.10.10.10/24）
 function limit_ip(){
   tc qdisc del dev ifb0 root
   tc qdisc add dev ifb0 root handle 1: htb default 1
@@ -153,7 +153,7 @@ if [ $# -lt 2 ];then
   exit 1
 fi
 
-while getopts ":i:c:p:r:hd" opt; do
+while getopts ":i:c:p:r:hdn:" opt; do
   case $opt in
     i)
       getContainer $OPTARG
@@ -166,9 +166,12 @@ while getopts ":i:c:p:r:hd" opt; do
     p)
       port=${OPTARG}
       ;;
+    n)
+      ip=${OPTARG}
     r)
       rates=$OPTARG
       ;;
+    
     h)
       use
       ;;
@@ -185,5 +188,12 @@ while getopts ":i:c:p:r:hd" opt; do
       ;;
   esac
 done
-echo "${container} ${port} ${rates}"
-limit ${container}
+
+echo "INFO: the args--${container} ${port} ${rates} ${ip}"
+if [ ${ip} ];then
+  echo "INFO: limit_ip"
+  redirect_nic "ens192"
+  limit_ip ${rates} ${ip}
+else
+  limit ${container}
+fi
