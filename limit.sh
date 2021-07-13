@@ -6,6 +6,7 @@ veth=""
 port=""
 nic=""
 ip=""
+
 #get host veth corresponding to container
 #Input: the container's ID
 function getveth() {
@@ -53,6 +54,14 @@ function getContainer(){
   #        containerId[$i]=$(docker ps | grep $name | awk '{print $1}')
   #        ((i++))
   #done
+}
+
+#get the local nic name
+function get_nic(){
+  local str=$(ip link show)
+  str=${str#*2: }
+  nic=${str%%:*}
+  echo "INFO: the local nic name is ${nic}"
 }
 
 #redirect eth0 to ifb0 to limit ingress traffic
@@ -125,7 +134,6 @@ function limit(){
     limit_bridge ${veth} ${rates}
   else
     echo "INFO: limit_host"
-    redirect_nic "ens192"
     limit_host ${rates} ${port}
   fi
 }
@@ -142,7 +150,7 @@ function use(){
   -h       Print the use information
   
   do you want test effect?
-  In addition to checking the correspongding qdisc ruls, you can alse use 'iperf' command:
+  In addition to checking the correspongding qdisc rules, you can alse use 'iperf' command:
   you have to start a server: iperf3 -s -p $port
   client:                     docker exec -it $containerID sh -c 'iperf3 -c $ip -p $port -R'
   "
@@ -190,9 +198,14 @@ while getopts ":i:c:p:r:hdn:" opt; do
 done
 
 echo "INFO: the args--${container} ${port} ${rates} ${ip}"
+
+if [ ${ip} -o ${port} ];then
+  get_nic
+  redirect_nic ${nic}
+fi
+
 if [ ${ip} ];then
   echo "INFO: limit_ip"
-  redirect_nic "ens192"
   limit_ip ${rates} ${ip}
 else
   limit ${container}
