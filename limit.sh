@@ -55,6 +55,17 @@ function getContainer(){
   #done
 }
 
+#redirect eth0 to ifb0 to limit ingress traffic
+#Input: the NIC name (typically eth0),
+function redirect_nic(){
+  #open ifb0 network interface
+  modprobe ifb numifbs=1
+  ip link set ifb0 up
+  #redirect eth0 to ifb0
+  tc qdisc add dev $1 ingress handle ffff:
+  tc filter add dev $1 parent ffff: protocol ip prio 0 u32 match u32 0 0 flowid ffff: action mirred egress redirect dev ifb0
+}
+
 #Input: veth,rates
 function limit_bridge(){
   if [ $@ -le 0 || $@ -gt 2 ]; then
@@ -75,23 +86,32 @@ function limit_bridge(){
   fi
 }
 
-#Input: the NIC name (typically eth0),rates,port
+#Input: rates,port
 function limit_host(){
-  #open ifb0 network interface
-  modprobe ifb numifbs=1
-  ip link set ifb0 up
-  #redirect eth0 to ifb0
-  tc qdisc add dev $1 ingress handle ffff:
-  tc filter add dev $1 parent ffff: protocol ip prio 0 u32 match u32 0 0 flowid ffff: action mirred egress redirect dev ifb0
   #limit egress bandwidth of ifb0
   tc qdisc del dev ifb0 root
   tc qdisc add dev ifb0 root handle 1:0 htb default 1
+  
   tc class add dev ifb0 parent 1:0 classid 1:1 htb rate ${2} burst 20k
+  
   tc class add dev ifb0 parent 1:1 classid 1:10 htb rate ${2}
   tc qdisc add dev ifb0 parent 1:10 handle 10: sfq perturb 10
+  
   tc filter add dev ifb0 parent 1:0 prio 1 u32 match ip dport ${3} 0xffff flowid 1:10
 }
 
+#Input: rate,ip/marsk
+function limit_ip(){
+  tc qdisc del dev ifb0 root
+  tc qdisc add dev ifb0 root handle 1: htb default 1
+  
+  tc class add dev ifb0 parent 1:0 classid 1:1 htb rate ${1} burst 20k
+  
+  tc class add dev ifb0 parent 1:1 classid 1:10 htb rate ${1} ceil ${1} burst 20k
+  tc qdisc add dev ifb0 parent 1:10 handle 10: sfq perturb 10
+  
+  tc filter add dev ifb0 protocol ip parent 1:0 prio 1 u32 match ip src ${2} flowid 1:10
+}
 
 #Input: container Id or container name
 function limit(){
@@ -105,7 +125,8 @@ function limit(){
     limit_bridge ${veth} ${rates}
   else
     echo "INFO: limit_host"
-    limit_host "ens192" ${rates} ${port}
+    redirect_nic "ens192"
+    limit_host ${rates} ${port}
   fi
 }
 
