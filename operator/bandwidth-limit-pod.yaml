@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: bandwidth-limit
+  namespace: bandwidth-limit
+spec:
+  nodeSelector:
+    imagecache: "true"
+  tolerations:
+  - key: "noSchedule"
+    operator: "Exists"
+    effect: "NoSchedule"
+  containers:
+  - name: bandwidth-limit
+    image: yrxing/bandwidth-limit:1.0
+    imagePullPolicy: Always
+  serviceAccountName: bandwidth-limit-acc
