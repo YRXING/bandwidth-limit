@@ -161,7 +161,7 @@ if [ $# -lt 2 ];then
   exit 1
 fi
 
-while getopts ":i:c:p:r:hdn:" opt; do
+while getopts ":i:c:p:r:hd:n:" opt; do
   case $opt in
     i)
       getContainer $OPTARG
@@ -184,7 +184,7 @@ while getopts ":i:c:p:r:hdn:" opt; do
       use
       ;;
     d)
-      tc qdisc dev dev $veth root
+      tc qdisc dev dev ${OPTARG} root
       echo "INFO: qdisc clear successfully!"
       ;;
     :)
