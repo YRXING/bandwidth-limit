@@ -6,6 +6,7 @@ What it can do：
 - limit bandwidth directly according to contaienr name or container ID
 - It can automatically select the corresponding bandwidth limiting policy according to the network mode of running container
 - limit the traffic of specifies IP
+- clear the qdisc rules manually by specifying the network interface card (automatic mode under development)
 
 Useage：
 
@@ -19,6 +20,10 @@ Useage：
 
 ```bash
 ./limit.sh -I 10.10.102.190/24 -r [rates]
+```
+
+```bash
+./limit.sh -d ifb0
 ```
 
 
