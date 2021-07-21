@@ -175,7 +175,7 @@ while getopts ":i:c:p:r:hd:n:" opt; do
       port=${OPTARG}
       ;;
     n)
-      ip=${OPTARG}
+      ip=${OPTARG};;
     r)
       rates=$OPTARG
       ;;
