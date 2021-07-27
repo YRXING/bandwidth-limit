@@ -24,12 +24,12 @@ function getveth() {
   
   # Get the index number of a docker container's first veth interface (typically eth0)
   ils=$(ip netns exec "ns-${container_pid}" ip link show type veth)
-  container_ifindex="${ils%%:*}"
-  
+  container_host_ifindex="${ils#*@if}"
+  container_host_ifindex="${container_host_ifindex%%:*}"
   # Get the host veth interface attached to a container.
-  host_network=$(ip link show)
-  prefix="${hostnetwork%%@if${container_ifindex}:*}"
-  veth="${prefix##*: }"
+  host_network=$(ip link show | grep "${container_host_ifindex}: ")
+  postfix="${host_network##${container_host_ifindex}: }"
+  veth="${postfix%%@if*}"
   echo "INFO: the veth of [ $1 ] on the host is [ $veth ]"
 }
 
@@ -41,19 +41,9 @@ function getContainer(){
     exit 1
   fi
   echo "INFO: getContainer function --- arg: [ $1 ]"
-  local images
-  images=($(docker images | grep $1 | awk '{print $1}'))
-  echo "INFO: the name from image ID is [ ${images[0]} ]"
-  containerIDs=($(docker ps | grep ${images[0]} | awk '{print $1}'))
+  containerIDs=($(docker ps -qf "ancestor=$1"))
   echo "INFO: the running containers: [ ${containerIDs[@]} ]"
   container=${containerIDs[0]}
-  #images=($(docker images | grep $1 | awk '{if ($2=="latest") print $1;else print $1":"$2}'))
-  #declare -a containerId
-  #declare -i i=0
-  #for name in "${images[@]}";do
-  #        containerId[$i]=$(docker ps | grep $name | awk '{print $1}')
-  #        ((i++))
-  #done
 }
 
 #get the local nic name
@@ -76,27 +66,24 @@ function redirect_nic(){
 }
 
 #Input: veth,rates
-function limit_bridge(){
-  if [ $@ -le 0 || $@ -gt 2 ]; then
-    echo "ERROR: limit function --- wrong use of parameters."
-    exit 1
+function limit_veth(){
+  echo "INFO: limit_veth function called --- arg: [ $1 ] [ $2 ] "
+  echo "INFO: qdisc before is [ $(tc -s qdisc ls dev $1) ]"
+  tc qdisc del dev $1 root 
+  tc qdisc add dev $1 root tbf rate $2 latency 50ms burst 20k
+  if (($? != 0)); then
+    echo "ERROR: qdisc set failed!"
+    exit 1:
   else
-    echo "INFO: limit function --- arg: [ $1 ] [ $2 ] "
-    echo "INFO: qdisc before is [ $(tc -s qdisc ls dev $1) ]"
-    tc qdisc del dev $1 root 
-    tc qdisc add dev $1 root tbf rate $2 latency 50ms burst 20k
-    if (($? != 0)); then
-      echo "ERROR: qdisc set failed!"
-      exit 1
-    else
-      echo "INFO: qisc set successfully!"
-      echo "INFO: qdisc now is [ $(tc -s qdisc ls dev $1) ]"
-    fi
+    echo "INFO: qisc set successfully!"
+    echo "INFO: qdisc now is [ $(tc -s qdisc ls dev $1) ]"
   fi
 }
 
 #Input: rates,port
 function limit_host(){
+  echo "INFO: limit_host function called --- arg: [ $1 ] [ $2 ] "
+  echo "INFO: qdisc before is [ $(tc -s qdisc ls dev ifb0) ]"
   #limit egress bandwidth of ifb0
   tc qdisc del dev ifb0 root
   tc qdisc add dev ifb0 root handle 1:0 htb default 1
@@ -107,10 +94,14 @@ function limit_host(){
   tc qdisc add dev ifb0 parent 1:10 handle 10: sfq perturb 10
   
   tc filter add dev ifb0 parent 1:0 prio 1 u32 match ip dport ${3} 0xffff flowid 1:10
+  echo "INFO: qisc set successfully!"
+  echo "INFO: qdisc now is [ $(tc -s qdisc ls dev ifb0) ]"
 }
 
 #Input: rate,ip/marsk（for example: 10.10.10.10/24）
 function limit_ip(){
+  echo "INFO: limit_ip function called --- arg: [ $1 ] [ $2 ] "
+  echo "INFO: qdisc before is [ $(tc -s qdisc ls dev ifb0) ]"
   tc qdisc del dev ifb0 root
   tc qdisc add dev ifb0 root handle 1: htb default 1
   
@@ -120,23 +111,10 @@ function limit_ip(){
   tc qdisc add dev ifb0 parent 1:10 handle 10: sfq perturb 10
   
   tc filter add dev ifb0 protocol ip parent 1:0 prio 1 u32 match ip src ${2} flowid 1:10
+  echo "INFO: qisc set successfully!"
+  echo "INFO: qdisc now is [ $(tc -s qdisc ls dev ifb0) ]"
 }
 
-#Input: container Id or container name
-function limit(){
-  #get container netwokr mode
-  local network=$(docker inspect -f '{{.NetworkSettings.Networks}}' $1)
-  network=${network#map[}
-  network_mode=${network%:*}
-  echo "INFO: the container [$1]'s network_mode is ${network_mode}"
-  if [ ${network_mode} == "bridge" ];then
-    echo "INFO: limit_bridge"
-    limit_bridge ${veth} ${rates}
-  else
-    echo "INFO: limit_host"
-    limit_host ${rates} ${port}
-  fi
-}
 
 function use(){
   echo "Useage: script [options] [argument]
@@ -172,17 +150,13 @@ while getopts ":i:c:p:r:hd:n:" opt; do
       getveth ${container}
       ;;
     p)
-      port=${OPTARG}
-      ;;
+      port=${OPTARG};;
     n)
       ip=${OPTARG};;
     r)
-      rates=$OPTARG
-      ;;
-    
+      rates=$OPTARG;;
     h)
-      use
-      ;;
+      use;;
     d)
       tc qdisc dev dev ${OPTARG} root
       echo "INFO: qdisc clear successfully!"
@@ -192,8 +166,7 @@ while getopts ":i:c:p:r:hd:n:" opt; do
       exit 1
       ;;
     ?)
-      echo "Invalid option: -$OPTARG"
-      ;;
+      echo "Invalid option: -$OPTARG";;
   esac
 done
 
@@ -207,6 +180,10 @@ fi
 if [ ${ip} ];then
   echo "INFO: limit_ip"
   limit_ip ${rates} ${ip}
+elif [ ${port} ];then
+  echo "INFO: limit_host"
+  limit_host ${rates} ${port}
 else
-  limit ${container}
+  echo "INFO: limit_veth"
+  limit_veth ${veth} ${rates}
 fi

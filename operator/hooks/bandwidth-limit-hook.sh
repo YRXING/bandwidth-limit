@@ -24,5 +24,6 @@ else
     container=$()
     hostnetwork=()
     #set qdisc rules for host
+    #but we can not execute host's command in a container
   fi
 fi

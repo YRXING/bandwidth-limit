@@ -5,7 +5,8 @@ metadata:
   namespace: bandwidth-limit
 spec:
   nodeSelector:
-    imagecache: "true"
+    kubernetes.io/hostname: k8s-node-187
+  hostNetwork: true
   tolerations:
   - key: "noSchedule"
     operator: "Exists"
