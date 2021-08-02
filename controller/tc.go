@@ -31,6 +31,7 @@ const latencyInMillis = 25
 const hardwareHeaderLen = 1500
 
 //tc qdisc replace dev $dev root tbf rate $rate latency 50ms burst 20k
+//unit is byte
 func ReplaceTbf(dev netlink.Link, rate uint64) error {
 	if rate <= 0 {
 		return fmt.Errorf("invalid rate #{rate}")

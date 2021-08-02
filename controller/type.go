@@ -8,3 +8,11 @@ type SetRuleConfig struct {
 	HostNetwork bool
 }
 
+//tc unit (byte)
+const (
+	TC_BPS	=	""
+	TC_KPS	=	"k"
+	TC_MPS	=	"m"
+	TC_GPS	=	"g"
+	TC_TPS	=	"t"
+)

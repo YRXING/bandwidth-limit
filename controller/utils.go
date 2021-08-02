@@ -36,6 +36,7 @@ func SetTcRule(cfg *SetRuleConfig){
 			log.Fatalf("error set link %s to up, %w",hostVethLink,err)
 		}
 		rate , err := Translate(cfg.Ingress)
+		log.Printf("the rate translated is %d",rate)
 		if err != nil {
 			log.Fatalf("error get rate %s",err)
 		}
@@ -78,26 +79,16 @@ func Translate(tf string) (uint64,error) {
 	unit = strings.ToLower(unit)
 	var rate uint64
 	switch unit {
-	case "bit":
-		rate = pow(digit,3)
-	case "kbit":
-		rate = pow(digit,6)
-	case "mbit":
-		rate = pow(digit,9)
-	case "gbit":
-		rate = pow(digit,12)
-	case "tbit":
-		rate = pow(digit,15)
-	case "bps":
-		rate = pow(digit,3)*8
-	case "kbps":
-		rate = pow(digit,6)*8
-	case "mbps":
-		rate = pow(digit,9)*8
-	case "gbps":
-		rate = pow(digit,12)*8
-	case "tbps":
-		rate = pow(digit,15)*8
+	case TC_BPS:
+		break
+	case TC_KPS:
+		rate = Pow(digit,3)
+	case TC_MPS:
+		rate = Pow(digit,6)
+	case TC_GPS:
+		rate = Pow(digit,9)
+	case TC_TPS:
+		rate = Pow(digit,12)
 	default:
 		err = errors.New("invalid unit")
 	}
@@ -107,7 +98,7 @@ func Translate(tf string) (uint64,error) {
 	return rate,nil
 }
 
-func pow(data,n int) uint64 {
+func Pow(data,n int) uint64 {
 	for i:=0;i<n;i++ {
 		data*=10
 	}
