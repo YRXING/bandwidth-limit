@@ -1,10 +1,10 @@
 package controller
 
 import (
-"fmt"
-"github.com/pkg/errors"
-"github.com/vishvananda/netlink"
-"math"
+	"fmt"
+	"github.com/pkg/errors"
+	"github.com/vishvananda/netlink"
+	"math"
 )
 
 func burst(rate uint64, mtu int) uint32 {
@@ -37,10 +37,9 @@ func ReplaceTbf(dev netlink.Link, rate uint64) error {
 		return fmt.Errorf("invalid rate #{rate}")
 	}
 	burst := burst(rate, dev.Attrs().MTU+hardwareHeaderLen)
-	buffer := buffer(rate,burst)
+	buffer := buffer(rate, burst)
 	latency := latencyInUsec(latencyInMillis)
-	limit := limit(rate,latency,buffer)
-
+	limit := limit(rate, latency, buffer)
 
 	tbf := &netlink.Tbf{
 		QdiscAttrs: netlink.QdiscAttrs{
