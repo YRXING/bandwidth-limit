@@ -4,7 +4,7 @@ import (
 	"errors"
 	jsoniter "github.com/json-iterator/go"
 	"github.com/vishvananda/netlink"
-	"log"
+	"k8s.io/klog/v2"
 	"strconv"
 	"strings"
 	"unicode"
@@ -16,28 +16,39 @@ func SetTcRule(cfg *SetRuleConfig) {
 	if cfg.HostNetwork {
 		LimitPort(GetHostLink())
 	}
+
 	//set Ingress
 	if len(cfg.Ingress) > 0 {
 		if cfg.HostVethIndex == -1 {
-			log.Fatalf("can not get host veth !")
+			klog.Errorf("can not get host veth !")
 		}
 
-		hostVethLink, err := netlink.LinkByIndex(cfg.HostVethIndex)
-		log.Printf("the host veth name is %s", hostVethLink.Attrs().Name)
-
+		link, err := netlink.LinkByIndex(cfg.HostVethIndex)
 		if err != nil {
-			log.Fatalf("error found link %s,%w", cfg.HostVethIndex, err)
+			klog.Errorf("error found link %s,%+v", cfg.HostVethIndex, err)
 		}
+
+		hostVethLink := link.(*netlink.Veth)
+		klog.Infof("the host veth name is %s", hostVethLink.Attrs().Name)
+
 		_, err = EnsureLinkUp(hostVethLink)
 		if err != nil {
-			log.Fatalf("error set link %s to up, %w", hostVethLink, err)
+			klog.Errorf("error set link %s to up, %+v", hostVethLink, err)
 		}
 		rate, err := Translate(cfg.Ingress)
-		log.Printf("the rate translated is %d", rate)
+		klog.Infof("the rate translated is %d", rate)
+
 		if err != nil {
-			log.Fatalf("error get rate %s", err)
+			klog.Errorf("error get rate %s", err)
 		}
-		ReplaceTbf(hostVethLink, rate)
+
+		err = ReplaceTbf(hostVethLink, rate)
+		if err != nil {
+			klog.Errorf("set qdisc on link %s failed!",hostVethLink.Name)
+		}else {
+			klog.Infof("set qdisc on host veth %d: %s successfully",hostVethLink.Index,hostVethLink.Name)
+		}
+
 	}
 
 	//set Egress

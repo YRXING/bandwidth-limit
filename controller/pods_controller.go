@@ -93,12 +93,11 @@ func AddPod(obj interface{}) {
 		containerPid := GetContainerPid(containerId)
 		ExposeNetNs(containerPid)
 		GetVethInfo(containerPid,cfg)
-		klog.Infof("Ingress:%s|Egress:%s|HostVethIndex:%d|ContVethIndex:%d|HostNetwork:%s",cfg.Ingress,cfg.Egress,cfg.HostVethIndex,cfg.ContVethIndex,cfg.HostNetwork)
+		klog.Infof("%+v",cfg)
 
 	}
 
-
-	//TODO:SetTcRule
+	SetTcRule(cfg)
 }
 
 func UpdatePod(oldObj, newObj interface{}) {
@@ -129,7 +128,7 @@ func UpdatePod(oldObj, newObj interface{}) {
 
 	klog.Info(cfg)
 
-	//TODO:SetTcRule
+	SetTcRule(cfg)
 }
 
 func DeletePod(obj interface{}) {
@@ -159,5 +158,5 @@ func DeletePod(obj interface{}) {
 
 	klog.Info(cfg)
 
-	//TODO:DeletTcRule
+	SetTcRule(cfg)
 }

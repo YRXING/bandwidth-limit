@@ -68,18 +68,24 @@ func GetContainerPid(containerId string) string{
 func ExposeNetNs(pid string){
 	//create symbolic link to container's process net namespace
 	netFile := filepath.Join("/proc",pid,"ns/net")
-	netns := filepath.Join("/var/run/netns/ns-"+pid)
+	symlinkNetFile := filepath.Join("/var/run/netns/ns-"+pid)
 
-	_,err := os.Open("/var/run/netns")
+	//check if netns directory exists
+	//if not, create it.
+	_,err := os.Stat("/var/run/netns")
 	if err != nil {
-		os.Mkdir("/var/run/netns",777)
+		if os.IsNotExist(err) {
+			os.Mkdir("/var/run/netns", 0777)
+		}
 	}
 
-	os.Create(netns)
-
-	err = os.Symlink(netFile,netns)
+	err = os.Symlink(netFile,symlinkNetFile)
 	if err != nil {
 		klog.Error(err)
+		if os.IsExist(err) {
+			os.Remove(symlinkNetFile)
+			os.Symlink(netFile,symlinkNetFile)
+		}
 	}
 
 }
