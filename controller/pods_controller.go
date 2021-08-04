@@ -75,8 +75,6 @@ func AddPod(obj interface{}) {
 	if err != nil {
 		klog.Info(err)
 	}
-	klog.Infof("pod's node name is %s",pod.Spec.NodeName)
-	klog.Info("pod's host name is %s",pod.Spec.Hostname)
 	if hostName != pod.Spec.NodeName {
 		return
 	}
@@ -85,10 +83,22 @@ func AddPod(obj interface{}) {
 		Ingress:     pod.Annotations["ingress-bandwidth"],
 		Egress:      pod.Annotations["egress-bandwidth"],
 		HostNetwork: pod.Spec.HostNetwork,
+		HostVethIndex: -1,
+		ContVethIndex: -1,
 	}
-	//get netlink
-	klog.Info(cfg)
-	//SetTcRule
+
+	if cfg.Ingress != "" || cfg.Egress != "" {
+		containerId := pod.Status.ContainerStatuses[0].ContainerID[9:]
+		klog.Info(containerId)
+		containerPid := GetContainerPid(containerId)
+		ExposeNetNs(containerPid)
+		GetVethInfo(containerPid,cfg)
+		klog.Infof("Ingress:%s|Egress:%s|HostVethIndex:%d|ContVethIndex:%d|HostNetwork:%s",cfg.Ingress,cfg.Egress,cfg.HostVethIndex,cfg.ContVethIndex,cfg.HostNetwork)
+
+	}
+
+
+	//TODO:SetTcRule
 }
 
 func UpdatePod(oldObj, newObj interface{}) {
@@ -97,8 +107,6 @@ func UpdatePod(oldObj, newObj interface{}) {
 	if err != nil {
 		klog.Info(err)
 	}
-	klog.Infof("pod's node name is %s",pod.Spec.NodeName)
-	klog.Info("pod's host name is %s",pod.Spec.Hostname)
 	if hostName != pod.Spec.NodeName {
 		return
 	}
@@ -107,10 +115,20 @@ func UpdatePod(oldObj, newObj interface{}) {
 		Ingress:     pod.Annotations["ingress-bandwidth"],
 		Egress:      pod.Annotations["egress-bandwidth"],
 		HostNetwork: pod.Spec.HostNetwork,
+		HostVethIndex: -1,
+		ContVethIndex: -1,
 	}
-	//TODO:get netlink
+
+	if cfg.Ingress != "" || cfg.Egress != "" {
+		containerId := pod.Status.ContainerStatuses[0].ContainerID[9:]
+		klog.Info(containerId)
+		containerPid := GetContainerPid(containerId)
+		ExposeNetNs(containerPid)
+		GetVethInfo(containerPid,cfg)
+	}
 
 	klog.Info(cfg)
+
 	//TODO:SetTcRule
 }
 
@@ -120,8 +138,6 @@ func DeletePod(obj interface{}) {
 	if err != nil {
 		klog.Info(err)
 	}
-	klog.Infof("pod's node name is %s",pod.Spec.NodeName)
-	klog.Info("pod's host name is %s",pod.Spec.Hostname)
 	if hostName != pod.Spec.NodeName {
 		return
 	}
@@ -130,8 +146,17 @@ func DeletePod(obj interface{}) {
 		Ingress:     pod.Annotations["ingress-bandwidth"],
 		Egress:      pod.Annotations["egress-bandwidth"],
 		HostNetwork: pod.Spec.HostNetwork,
+		HostVethIndex: -1,
+		ContVethIndex: -1,
 	}
-	//TODO:get netlink
+	if cfg.Ingress != "" || cfg.Egress != "" {
+		containerId := pod.Status.ContainerStatuses[0].ContainerID[9:]
+		klog.Info(containerId)
+		containerPid := GetContainerPid(containerId)
+		ExposeNetNs(containerPid)
+		GetVethInfo(containerPid,cfg)
+	}
+
 	klog.Info(cfg)
 
 	//TODO:DeletTcRule

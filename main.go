@@ -9,7 +9,7 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/util/homedir"
 	"path/filepath"
-	"time"
+
 )
 
 func main() {
@@ -33,7 +33,7 @@ func main() {
 	stopCh := make(chan struct{})
 	defer close(stopCh)
 
-	sharedInformers := informers.NewSharedInformerFactory(clientset,time.Minute)
+	sharedInformers := informers.NewSharedInformerFactory(clientset,0)
 	podInformer := sharedInformers.Core().V1().Pods().Informer()
 	podInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: controller.AddPod,

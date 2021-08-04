@@ -1,11 +1,14 @@
 package controller
 
+import "github.com/containernetworking/plugins/pkg/ns"
+
 type SetRuleConfig struct {
 	Ingress      string
 	Egress       string
-	HostVETHName string //set ingress rule on host veth
-	ContVethName string //set egress rule on container veth
+	HostVethIndex int //set ingress rule on host veth
+	ContVethIndex int //set egress rule on container veth
 	HostNetwork  bool
+	containerNetNs	ns.NetNS
 }
 
 //tc unit (byte)

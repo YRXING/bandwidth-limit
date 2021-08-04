@@ -2,19 +2,14 @@ package controller
 
 import (
 	"errors"
-	"fmt"
+	jsoniter "github.com/json-iterator/go"
 	"github.com/vishvananda/netlink"
 	"log"
-	"net"
 	"strconv"
 	"strings"
 	"unicode"
 )
 
-func GetPodInfo() *SetRuleConfig {
-
-	return nil
-}
 
 func SetTcRule(cfg *SetRuleConfig) {
 	// check network mode
@@ -23,13 +18,15 @@ func SetTcRule(cfg *SetRuleConfig) {
 	}
 	//set Ingress
 	if len(cfg.Ingress) > 0 {
-		if len(cfg.HostVETHName) == 0 {
-			log.Fatalf("can not get host veth name!")
+		if cfg.HostVethIndex == -1 {
+			log.Fatalf("can not get host veth !")
 		}
-		log.Printf("the host veth name is %s", cfg.HostVETHName)
-		hostVethLink, err := netlink.LinkByName(cfg.HostVETHName)
+
+		hostVethLink, err := netlink.LinkByIndex(cfg.HostVethIndex)
+		log.Printf("the host veth name is %s", hostVethLink.Attrs().Name)
+
 		if err != nil {
-			log.Fatalf("error found link %s,%w", cfg.HostVETHName, err)
+			log.Fatalf("error found link %s,%w", cfg.HostVethIndex, err)
 		}
 		_, err = EnsureLinkUp(hostVethLink)
 		if err != nil {
@@ -45,23 +42,6 @@ func SetTcRule(cfg *SetRuleConfig) {
 
 	//set Egress
 
-}
-
-//EnsureLinkUp set link up, return changed and err
-func EnsureLinkUp(link netlink.Link) (bool, error) {
-	if link.Attrs().Flags&net.FlagUp != 0 {
-		return false, nil
-	}
-	return true, LinkSetUp(link)
-}
-
-func LinkSetUp(link netlink.Link) error {
-	errInfo := fmt.Sprintf("ip link set %s up", link.Attrs().Name)
-	err := netlink.LinkSetUp(link)
-	if err != nil {
-		return fmt.Errorf("error %s,%w", errInfo, err)
-	}
-	return nil
 }
 
 //translate ingress/egress to tc rate
@@ -103,3 +83,36 @@ func Pow(data, n int) uint64 {
 	}
 	return uint64(data)
 }
+
+
+//When a json object is large and has many fields. It is absolutely unnecessary to
+//create a large entity class object in order to access several fields.
+func GetFiledFromJason(path []string, data []byte) string {
+	var temp jsoniter.Any
+	for i,v := range path {
+		if i==0 {
+			temp = jsoniter.Get(data,v)
+			if temp == nil {
+				return ""
+			}
+		}else {
+			temp = temp.Get(v)
+			if temp == nil {
+				return ""
+			}
+		}
+	}
+
+	switch temp.ValueType() {
+	case jsoniter.InvalidValue,jsoniter.NilValue,jsoniter.BoolValue,jsoniter.ArrayValue,jsoniter.ObjectValue:
+		return ""
+	case jsoniter.StringValue:
+		return temp.ToString()
+	case jsoniter.NumberValue:
+		return strconv.Itoa(temp.ToInt())
+	}
+
+	return ""
+}
+
+
