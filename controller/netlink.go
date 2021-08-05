@@ -12,9 +12,7 @@ import (
 	"github.com/containernetworking/plugins/pkg/ns"
 )
 
-func LimitVeth(veth netlink.Veth) {
 
-}
 func LimitPort(dev netlink.Link) {
 
 }
@@ -40,7 +38,7 @@ func LinkSetUp(link netlink.Link) error {
 }
 
 
-//read "/var/lib/docker/containers/container_id/config.json" to get container's information
+// Read "/var/lib/docker/containers/container_id/config.json" to get container's information.
 func GetContainerPid(containerId string) string{
 	path := filepath.Join("/var/lib/docker/containers/",containerId,"config.v2.json")
 
@@ -61,10 +59,10 @@ func GetContainerPid(containerId string) string{
 	return pid
 }
 
-//because docker hides the created network namespace link file to "/var/run/docker/netns"
-//ip netns only find the net namespace in "/var/run/netns"
-//so we should restore association
-//ln -sf "/proc/pid/ns/net" "/var/run/netns/container_id"
+// Because docker hides the created network namespace link file to "/var/run/docker/netns".
+// And ip netns command only find the net namespace in "/var/run/netns", so we should restore association.
+// But if we only want to enter the container's network namespace, just open "/proc/pid/ns/net" file.
+// Equivalent to: `ln -sf "/proc/pid/ns/net" "/var/run/netns/container_id"`
 func ExposeNetNs(pid string){
 	//create symbolic link to container's process net namespace
 	netFile := filepath.Join("/proc",pid,"ns/net")
@@ -90,11 +88,11 @@ func ExposeNetNs(pid string){
 
 }
 
-//enter container's net namespace to get containeVeth and hostVeth's index
+// Enter container's net namespace to get containeVeth and hostVeth's index
 func GetVethInfo(containerPid string,cfg *SetRuleConfig){
 
-	containerNetNsPath := filepath.Join("/var/run/netns/ns-"+containerPid)
-	contaienrNetNs , err := ns.GetNS(containerNetNsPath)
+	netFile := filepath.Join("/proc",containerPid,"ns/net")
+	contaienrNetNs , err := ns.GetNS(netFile)
 	if err != nil {
 		klog.Error(err)
 	}

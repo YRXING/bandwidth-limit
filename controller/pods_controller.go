@@ -89,15 +89,15 @@ func AddPod(obj interface{}) {
 
 	if cfg.Ingress != "" || cfg.Egress != "" {
 		containerId := pod.Status.ContainerStatuses[0].ContainerID[9:]
-		klog.Info(containerId)
+		klog.Infof("pod's contaier id is: %s",containerId)
 		containerPid := GetContainerPid(containerId)
-		ExposeNetNs(containerPid)
+		klog.Infof("pod's container pid is: %s",containerPid)
+		//ExposeNetNs(containerPid)
 		GetVethInfo(containerPid,cfg)
-		klog.Infof("%+v",cfg)
-
+		klog.Info(cfg)
+		SetTcRule(cfg)
 	}
 
-	SetTcRule(cfg)
 }
 
 func UpdatePod(oldObj, newObj interface{}) {
@@ -120,43 +120,43 @@ func UpdatePod(oldObj, newObj interface{}) {
 
 	if cfg.Ingress != "" || cfg.Egress != "" {
 		containerId := pod.Status.ContainerStatuses[0].ContainerID[9:]
-		klog.Info(containerId)
+		klog.Infof("pod's contaier id is: %s",containerId)
 		containerPid := GetContainerPid(containerId)
-		ExposeNetNs(containerPid)
+		klog.Infof("pod's container pid is: %s",containerPid)
+		//ExposeNetNs(containerPid)
 		GetVethInfo(containerPid,cfg)
+		klog.Info(cfg)
+		SetTcRule(cfg)
 	}
 
-	klog.Info(cfg)
-
-	SetTcRule(cfg)
 }
 
 func DeletePod(obj interface{}) {
-	pod := obj.(*v1.Pod)
-	hostName , err := os.Hostname()
-	if err != nil {
-		klog.Info(err)
-	}
-	if hostName != pod.Spec.NodeName {
-		return
-	}
+	//TODO: tear down
+	//pod := obj.(*v1.Pod)
+	//hostName , err := os.Hostname()
+	//if err != nil {
+	//	klog.Info(err)
+	//}
+	//if hostName != pod.Spec.NodeName {
+	//	return
+	//}
+	//
+	//cfg := &SetRuleConfig{
+	//	Ingress:     pod.Annotations["ingress-bandwidth"],
+	//	Egress:      pod.Annotations["egress-bandwidth"],
+	//	HostNetwork: pod.Spec.HostNetwork,
+	//	HostVethIndex: -1,
+	//	ContVethIndex: -1,
+	//}
+	//if cfg.Ingress != "" || cfg.Egress != "" {
+	//	containerId := pod.Status.ContainerStatuses[0].ContainerID[9:]
+	//	klog.Info(containerId)
+	//	containerPid := GetContainerPid(containerId)
+	//	ExposeNetNs(containerPid)
+	//	GetVethInfo(containerPid,cfg)
+	//	klog.Info(cfg)
+	//	SetTcRule(cfg)
+	//}
 
-	cfg := &SetRuleConfig{
-		Ingress:     pod.Annotations["ingress-bandwidth"],
-		Egress:      pod.Annotations["egress-bandwidth"],
-		HostNetwork: pod.Spec.HostNetwork,
-		HostVethIndex: -1,
-		ContVethIndex: -1,
-	}
-	if cfg.Ingress != "" || cfg.Egress != "" {
-		containerId := pod.Status.ContainerStatuses[0].ContainerID[9:]
-		klog.Info(containerId)
-		containerPid := GetContainerPid(containerId)
-		ExposeNetNs(containerPid)
-		GetVethInfo(containerPid,cfg)
-	}
-
-	klog.Info(cfg)
-
-	SetTcRule(cfg)
 }
