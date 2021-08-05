@@ -46,14 +46,17 @@ func GetContainerPid(containerId string) string{
 	defer file.Close()
 	if err != nil {
 		klog.Error(err)
+		return ""
 	}
 
 	//read all content
 	data,err := ioutil.ReadAll(file)
 	if err != nil {
 		klog.Error(err)
+		return ""
 	}
 
+	// if container is not running, the pid is 0
 	pid := GetFiledFromJason(strings.Split("State/Pid","/"),data)
 
 	return pid
@@ -95,6 +98,7 @@ func GetVethInfo(containerPid string,cfg *SetRuleConfig){
 	contaienrNetNs , err := ns.GetNS(netFile)
 	if err != nil {
 		klog.Error(err)
+		return
 	}
 
 	cfg.containerNetNs = contaienrNetNs

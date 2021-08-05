@@ -88,18 +88,32 @@ func AddPod(obj interface{}) {
 	}
 
 	if cfg.Ingress != "" || cfg.Egress != "" {
-		containerId := pod.Status.ContainerStatuses[0].ContainerID[9:]
-		klog.Infof("pod's contaier id is: %s",containerId)
-		containerPid := GetContainerPid(containerId)
-		klog.Infof("pod's container pid is: %s",containerPid)
-		//ExposeNetNs(containerPid)
-		GetVethInfo(containerPid,cfg)
-		klog.Info(cfg)
-		SetTcRule(cfg)
+		if pod.Status.ContainerStatuses == nil {
+			klog.Infof("Add event: container creating...")
+		}else if len(pod.Status.ContainerStatuses[0].ContainerID) == 0 {
+			klog.Infof("Add evnet: container creating...")
+		}else{
+			klog.Infof("Add event: container exists ")
+			containerId := pod.Status.ContainerStatuses[0].ContainerID[9:]
+			klog.Infof("pod's contaier id is: %v",containerId)
+			containerPid := GetContainerPid(containerId)
+			if containerPid == "0" {
+				klog.Errorf("container is not running")
+				return
+			}
+			klog.Infof("pod's container pid is: %s",containerPid)
+			////ExposeNetNs(containerPid)
+			GetVethInfo(containerPid,cfg)
+			if cfg.containerNetNs != nil {
+				klog.Info("start setting tc rules....")
+				//SetTcRule(cfg)
+			}
+		}
 	}
 
 }
 
+// Scale product update event even if you scale pod to 0
 func UpdatePod(oldObj, newObj interface{}) {
 	pod := newObj.(*v1.Pod)
 	hostName , err := os.Hostname()
@@ -109,7 +123,6 @@ func UpdatePod(oldObj, newObj interface{}) {
 	if hostName != pod.Spec.NodeName {
 		return
 	}
-
 	cfg := &SetRuleConfig{
 		Ingress:     pod.Annotations["ingress-bandwidth"],
 		Egress:      pod.Annotations["egress-bandwidth"],
@@ -119,14 +132,28 @@ func UpdatePod(oldObj, newObj interface{}) {
 	}
 
 	if cfg.Ingress != "" || cfg.Egress != "" {
-		containerId := pod.Status.ContainerStatuses[0].ContainerID[9:]
-		klog.Infof("pod's contaier id is: %s",containerId)
-		containerPid := GetContainerPid(containerId)
-		klog.Infof("pod's container pid is: %s",containerPid)
-		//ExposeNetNs(containerPid)
-		GetVethInfo(containerPid,cfg)
-		klog.Info(cfg)
-		SetTcRule(cfg)
+		if pod.Status.ContainerStatuses == nil {
+			klog.Infof("Update event: container creating...")
+		}else if len(pod.Status.ContainerStatuses[0].ContainerID) == 0 {
+			klog.Infof("Update evnet: container creating...")
+		}else{
+			klog.Infof("Update event: container exists ")
+			containerId := pod.Status.ContainerStatuses[0].ContainerID[9:]
+			klog.Infof("pod's contaier id is: %v",containerId)
+			containerPid := GetContainerPid(containerId)
+			if containerPid == "0" {
+				klog.Errorf("container is not running")
+				return
+			}
+			klog.Infof("pod's container pid is: %s",containerPid)
+			////ExposeNetNs(containerPid)
+			GetVethInfo(containerPid,cfg)
+			klog.Info(cfg)
+			if cfg.containerNetNs != nil {
+				klog.Info("start setting tc rules....")
+				//SetTcRule(cfg)
+			}
+		}
 	}
 
 }
