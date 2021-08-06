@@ -170,7 +170,7 @@ Connecting to host 10.10.102.190, port 8081
 
 
 
-the ingress bandwidth is `76.7 Gbits/sec`
+the ingress bandwidth is `76.7 Mbits/sec`
 
 ```bash
 root@registry-deployment-f769d8875-x7fkm:/# iperf3 -c 10.10.102.190 -p 8081 -R
