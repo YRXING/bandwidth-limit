@@ -93,7 +93,6 @@ func ExposeNetNs(pid string){
 
 // Enter container's net namespace to get containeVeth and hostVeth's index
 func GetVethInfo(containerPid string,cfg *SetRuleConfig){
-
 	netFile := filepath.Join("/proc",containerPid,"ns/net")
 	contaienrNetNs , err := ns.GetNS(netFile)
 	if err != nil {
@@ -128,5 +127,10 @@ func GetVethInfo(containerPid string,cfg *SetRuleConfig){
 }
 
 func GetHostLink() netlink.Link {
+	return nil
+}
+
+func GetHostNetNs() ns.NetNS {
+
 	return nil
 }

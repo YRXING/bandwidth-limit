@@ -80,8 +80,8 @@ func AddPod(obj interface{}) {
 	}
 
 	cfg := &SetRuleConfig{
-		Ingress:     pod.Annotations["ingress-bandwidth"],
-		Egress:      pod.Annotations["egress-bandwidth"],
+		Ingress:     pod.Annotations["k8s.harmonycloud.com/ingress-bandwidth"],
+		Egress:      pod.Annotations["k8s.harmonycloud.com/egress-bandwidth"],
 		HostNetwork: pod.Spec.HostNetwork,
 		HostVethIndex: -1,
 		ContVethIndex: -1,
@@ -102,11 +102,14 @@ func AddPod(obj interface{}) {
 				return
 			}
 			klog.Infof("pod's container pid is: %s",containerPid)
-			////ExposeNetNs(containerPid)
+			//ExposeNetNs(containerPid)
 			GetVethInfo(containerPid,cfg)
+			klog.Infof("Tc set up rules: %v",cfg)
 			if cfg.containerNetNs != nil {
 				klog.Info("start setting tc rules....")
-				//SetTcRule(cfg)
+				SetTcRule(cfg)
+			}else {
+				klog.Info("missing necessary information, tc rules set failed!")
 			}
 		}
 	}
@@ -114,6 +117,7 @@ func AddPod(obj interface{}) {
 }
 
 // Scale product update event even if you scale pod to 0
+// When pod on this node leaves, it product update event first, and delete event in the end.
 func UpdatePod(oldObj, newObj interface{}) {
 	pod := newObj.(*v1.Pod)
 	hostName , err := os.Hostname()
@@ -124,8 +128,8 @@ func UpdatePod(oldObj, newObj interface{}) {
 		return
 	}
 	cfg := &SetRuleConfig{
-		Ingress:     pod.Annotations["ingress-bandwidth"],
-		Egress:      pod.Annotations["egress-bandwidth"],
+		Ingress:     pod.Annotations["k8s.harmonycloud.com/ingress-bandwidth"],
+		Egress:      pod.Annotations["k8s.harmonycloud.com/egress-bandwidth"],
 		HostNetwork: pod.Spec.HostNetwork,
 		HostVethIndex: -1,
 		ContVethIndex: -1,
@@ -146,12 +150,14 @@ func UpdatePod(oldObj, newObj interface{}) {
 				return
 			}
 			klog.Infof("pod's container pid is: %s",containerPid)
-			////ExposeNetNs(containerPid)
+			//ExposeNetNs(containerPid)
 			GetVethInfo(containerPid,cfg)
-			klog.Info(cfg)
+			klog.Infof("Tc set up rules: %v",cfg)
 			if cfg.containerNetNs != nil {
 				klog.Info("start setting tc rules....")
-				//SetTcRule(cfg)
+				SetTcRule(cfg)
+			}else {
+				klog.Info("missing necessary information, tc rules set failed!")
 			}
 		}
 	}
@@ -159,6 +165,7 @@ func UpdatePod(oldObj, newObj interface{}) {
 }
 
 func DeletePod(obj interface{}) {
+	klog.Info("Delete event:...")
 	//TODO: tear down
 	//pod := obj.(*v1.Pod)
 	//hostName , err := os.Hostname()
