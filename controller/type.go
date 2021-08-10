@@ -19,3 +19,5 @@ const (
 	TC_GPS = "g"
 	TC_TPS = "t"
 )
+
+const Metaserver_Httpaddr = "http://127.0.0.1:10550"

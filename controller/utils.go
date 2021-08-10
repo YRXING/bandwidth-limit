@@ -2,98 +2,11 @@ package controller
 
 import (
 	"errors"
-	"github.com/containernetworking/plugins/pkg/ns"
 	jsoniter "github.com/json-iterator/go"
-	"github.com/vishvananda/netlink"
-	"k8s.io/klog/v2"
 	"strconv"
 	"strings"
 	"unicode"
 )
-
-
-func SetTcRule(cfg *SetRuleConfig) {
-	// check network mode
-	if cfg.HostNetwork {
-		LimitPort(GetHostLink())
-	}
-
-	//set Ingress on host veth
-	if len(cfg.Ingress) > 0 {
-		if cfg.HostVethIndex == -1 {
-			klog.Errorf("can not get host veth !")
-		}
-
-		link, err := netlink.LinkByIndex(cfg.HostVethIndex)
-		if err != nil {
-			klog.Errorf("error found link %s,%+v", cfg.HostVethIndex, err)
-		}
-
-		hostVethLink := link.(*netlink.Veth)
-		klog.Infof("the host veth name is %s", hostVethLink.Attrs().Name)
-
-		_, err = EnsureLinkUp(hostVethLink)
-		if err != nil {
-			klog.Errorf("error set link %s to up, %+v", hostVethLink, err)
-		}
-		rate, err := Translate(cfg.Ingress)
-		klog.Infof("the rate translated is %d bytes per second", rate)
-
-		if err != nil {
-			klog.Errorf("error get rate, error: %s", err)
-		}
-
-		err = ReplaceTbf(hostVethLink, rate)
-		if err != nil {
-			klog.Errorf("set qdisc on link %s failed!",hostVethLink.Name)
-		}else {
-			klog.Infof("set qdisc on host veth %d: %s successfully",hostVethLink.Index,hostVethLink.Name)
-		}
-
-	}
-
-	//set Egress on container veth
-	if len(cfg.Egress) > 0{
-		if cfg.ContVethIndex == -1 {
-			klog.Error("can not get container's veth!")
-			return
-		}
-		if cfg.containerNetNs == nil {
-			klog.Error("can not get container's net namespace!")
-			return
-		}
-
-		cfg.containerNetNs.Do(func(_ ns.NetNS) error {
-			link,err:= netlink.LinkByIndex(cfg.ContVethIndex)
-			if err != nil {
-				klog.Error("get container's link failed!")
-				return err
-			}
-			contVeth := link.(*netlink.Veth)
-
-			_, err = EnsureLinkUp(contVeth)
-			if err != nil {
-				klog.Errorf("error set link %s to up, %+v", contVeth, err)
-			}
-			rate, err := Translate(cfg.Egress)
-			klog.Infof("the rate translated is %d bytes per second", rate)
-
-			if err != nil {
-				klog.Errorf("error get rate, error: %s", err)
-			}
-
-			err = ReplaceTbf(contVeth, rate)
-			if err != nil {
-				klog.Errorf("set qdisc on link %s failed!",contVeth.Name)
-			}else {
-				klog.Infof("set qdisc on container's veth %d: %s successfully",contVeth.Index,contVeth.Name)
-			}
-
-			return err
-		})
-	}
-
-}
 
 //translate ingress/egress to tc rate
 func Translate(tf string) (uint64, error) {

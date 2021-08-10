@@ -10,16 +10,10 @@ import (
 	"path/filepath"
 	"strings"
 	"github.com/containernetworking/plugins/pkg/ns"
+	"syscall"
 )
 
 
-func LimitPort(dev netlink.Link) {
-
-}
-
-func LimitIP() {
-
-}
 //EnsureLinkUp set link up, return changed and err
 func EnsureLinkUp(link netlink.Link) (bool, error) {
 	if link.Attrs().Flags&net.FlagUp != 0 {
@@ -127,10 +121,100 @@ func GetVethInfo(containerPid string,cfg *SetRuleConfig){
 }
 
 func GetHostLink() netlink.Link {
+
 	return nil
 }
 
 func GetHostNetNs() ns.NetNS {
 
 	return nil
+}
+
+
+func CreateIfb(ifbLinkName string, mtu int) error{
+	err := netlink.LinkAdd(&netlink.Ifb{
+		netlink.LinkAttrs{
+			Name: ifbLinkName,
+			Flags: net.FlagUp,
+		},
+	})
+	if err != nil {
+		klog.Infof("adding ifb link err: %s",err)
+		return err
+	}
+	return nil
+}
+
+func Redirect(link,ifb netlink.Link) error {
+	//ensure ifb up
+	EnsureLinkUp(ifb)
+	ifb = ifb.(*netlink.Ifb)
+
+	// add ingress
+	// Equivalent to: `tc qdisc add dev device ingress handle ffff:`
+	ingress := &netlink.Ingress{
+		QdiscAttrs: netlink.QdiscAttrs{
+			LinkIndex: link.Attrs().Index,
+			Handle: netlink.MakeHandle(0xffff,0),
+			Parent: netlink.HANDLE_INGRESS,
+		},
+	}
+
+	err := netlink.QdiscAdd(ingress)
+	if err != nil {
+		return fmt.Errorf("create ingress qdisc: %s",err)
+	}
+
+	// add filter to mirror traffic to ifb device
+	// Equivalent to: `tc filter add dev device parent ffff: protocol ip prio 0 u32 match u32 0 0
+	// flowid ffff: action mirred egress redirect dev ifb0`
+	filter := &netlink.U32{
+		FilterAttrs: netlink.FilterAttrs{
+			LinkIndex: link.Attrs().Index,
+			Parent: ingress.QdiscAttrs.Handle,
+			Priority: 1,
+			Protocol: syscall.ETH_P_ALL,
+		},
+		ClassId: netlink.MakeHandle(1,1),
+		RedirIndex: ifb.Attrs().Index,
+		Actions: []netlink.Action{
+			&netlink.MirredAction{
+				ActionAttrs: netlink.ActionAttrs{},
+				MirredAction: netlink.TCA_EGRESS_REDIR,
+				Ifindex: ifb.Attrs().Index,
+			},
+		},
+	}
+
+	err = netlink.FilterAdd(filter)
+	if err != nil {
+		return fmt.Errorf("create ifb qdisc: %s",err)
+	}
+
+	return nil
+}
+
+func SafeQdiscList(link netlink.Link)([]netlink.Qdisc, error){
+	//Equivalent to: `tc qdisc show` and filter by link
+	qdiscs,err := netlink.QdiscList(link)
+	if err != nil {
+		return nil, err
+	}
+	result := []netlink.Qdisc{}
+	for _,qdisc := range qdiscs{
+		//filter out pfifo_fast qdisc because older kernels don't return them
+		_,pfifo := qdisc.(*netlink.PfifoFast)
+		if !pfifo {
+			result = append(result,qdisc)
+		}
+	}
+	return result, nil
+}
+
+func LimitPort(dev netlink.Link) {
+
+}
+
+func LimitIP() {
+
 }
