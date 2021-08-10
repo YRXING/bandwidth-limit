@@ -95,7 +95,7 @@ func AddPod(obj interface{}) {
 		}else{
 			klog.Infof("Add event: container exists ")
 			containerId := pod.Status.ContainerStatuses[0].ContainerID[9:]
-			klog.Infof("pod's contaier id is: %v",containerId)
+			klog.Infof("pod's contaier id is: %+v",containerId)
 			containerPid := GetContainerPid(containerId)
 			if containerPid == "0" {
 				klog.Errorf("container is not running")
@@ -104,7 +104,7 @@ func AddPod(obj interface{}) {
 			klog.Infof("pod's container pid is: %s",containerPid)
 			//ExposeNetNs(containerPid)
 			GetVethInfo(containerPid,cfg)
-			klog.Infof("Tc set up rules: %v",cfg)
+			klog.Infof("Tc set up rules: %+v",cfg)
 			if cfg.containerNetNs != nil {
 				klog.Info("start setting tc rules....")
 				SetTcRule(cfg)
@@ -143,7 +143,7 @@ func UpdatePod(oldObj, newObj interface{}) {
 		}else{
 			klog.Infof("Update event: container exists ")
 			containerId := pod.Status.ContainerStatuses[0].ContainerID[9:]
-			klog.Infof("pod's contaier id is: %v",containerId)
+			klog.Infof("pod's contaier id is: %+v",containerId)
 			containerPid := GetContainerPid(containerId)
 			if containerPid == "0" {
 				klog.Errorf("container is not running")
@@ -152,7 +152,7 @@ func UpdatePod(oldObj, newObj interface{}) {
 			klog.Infof("pod's container pid is: %s",containerPid)
 			//ExposeNetNs(containerPid)
 			GetVethInfo(containerPid,cfg)
-			klog.Infof("Tc set up rules: %v",cfg)
+			klog.Infof("Tc set up rules: %+v",cfg)
 			if cfg.containerNetNs != nil {
 				klog.Info("start setting tc rules....")
 				SetTcRule(cfg)

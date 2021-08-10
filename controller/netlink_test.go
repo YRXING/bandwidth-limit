@@ -1,6 +1,8 @@
 package controller
 
 import (
+	"fmt"
+	"github.com/vishvananda/netlink"
 	"github.com/vishvananda/netns"
 	"os"
 	"runtime"
@@ -33,8 +35,25 @@ func setUpNetlinkTest(t *testing.T) tearDownNetlinkTest {
 	}
 }
 
+
 func TestCreateIfb(t *testing.T) {
 	tearDown := setUpNetlinkTest(t)
 	defer tearDown()
 
+	CreateIfb("ifb0",1500)
+	links,err:= netlink.LinkList()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _,link := range links {
+		if link.Type() == "ifb" {
+			link = link.(*netlink.Ifb)
+			if link.Attrs().Name != "ifb0" {
+				t.Fatalf("create ifb link err")
+			}else {
+				fmt.Printf("%+v",link)
+			}
+		}
+	}
 }
